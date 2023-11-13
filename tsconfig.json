@@ -10,6 +10,6 @@
     "esModuleInterop": true,
     "noEmit": true
   },
-  "include": ["src"],
+  "include": ["src", "vscode.proposed.testingActiveProfile.d.ts"],
   "exclude": ["node_modules"]
 }

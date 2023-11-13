@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-// This matches the structs in packages/playwright-test/src/runner/runner.ts.
+// This matches the structs in packages/playwright/src/runner/runner.ts
 
 export type ProjectConfigWithFiles = {
   name: string;
   testDir: string;
-  use: { testIdAttribute?: string };
+  use: {
+    testIdAttribute?: string;
+    browserName?: string;
+    contextOptions: Record<string, string>;
+    launchOptions: Record<string, string>;
+  };
   files: string[];
 };
 

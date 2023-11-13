@@ -62,6 +62,11 @@ export type TestProject = {
   model: TestModel;
   isFirst: boolean;
   files: Map<string, TestFile>;
+
+  testIdAttribute?: string;
+  browserName?: string;
+  contextOptions: Record<string, string>;
+  launchOptions: Record<string, string>;
 };
 
 export class TestModel {
@@ -96,7 +101,6 @@ export class TestModel {
       for (const file of project.files)
         files.push(...await resolveSourceMap(file, this._fileToSources, this._sourceToFile));
       project.files = files;
-      this.config.testIdAttributeName = project.use?.testIdAttribute;
     }
 
     const projectsToKeep = new Set<string>();
@@ -123,6 +127,11 @@ export class TestModel {
       ...projectReport,
       isFirst,
       files: new Map(),
+      isDefault: false,
+      browserName: projectReport.use.browserName,
+      testIdAttribute: projectReport.use.testIdAttribute,
+      launchOptions: projectReport.use.launchOptions,
+      contextOptions: projectReport.use.contextOptions,
     };
     this.projects.set(project.name, project);
     return project;

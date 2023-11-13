@@ -297,8 +297,8 @@ export class ReusedBrowser implements vscodeTypes.Disposable {
     return !this._isRunningTests && !!this._pageCount;
   }
 
-  async record(models: TestModel[], recordNew: boolean) {
-    if (!this._checkVersion(models[0].config))
+  async record(selectedTestProject: TestProject, recordNew: boolean) {
+    if (!this._checkVersion(selectedTestProject.model.config))
       return;
     if (!this.canRecord()) {
       this._vscode.window.showWarningMessage(
@@ -310,7 +310,7 @@ export class ReusedBrowser implements vscodeTypes.Disposable {
       location: this._vscode.ProgressLocation.Notification,
       title: 'Playwright codegen',
       cancellable: true
-    }, async (progress, token) => this._doRecord(progress, models[0], recordNew, token));
+    }, async (progress, token) => this._doRecord(progress, selectedTestProject, recordNew, token));
   }
 
   highlight(selector: string) {
@@ -344,7 +344,8 @@ export class ReusedBrowser implements vscodeTypes.Disposable {
     return true;
   }
 
-  private async _doRecord(progress: vscodeTypes.Progress<{ message?: string; increment?: number }>, model: TestModel, recordNew: boolean, token: vscodeTypes.CancellationToken) {
+  private async _doRecord(progress: vscodeTypes.Progress<{ message?: string; increment?: number }>, selectedTestProject: TestProject, recordNew: boolean, token: vscodeTypes.CancellationToken) {
+    const model = selectedTestProject.model;
     const startBackend = this._startBackendIfNeeded(model.config);
     let editor: vscodeTypes.TextEditor | undefined;
     if (recordNew)
@@ -363,7 +364,13 @@ export class ReusedBrowser implements vscodeTypes.Disposable {
     }
 
     try {
-      await this._backend?.setMode({ mode: 'recording', testIdAttributeName: model.config.testIdAttributeName });
+      await this._backend?.setMode({
+        mode: 'recording',
+        testIdAttributeName: selectedTestProject.testIdAttribute,
+        browserName: selectedTestProject.browserName,
+        launchOptions: selectedTestProject.launchOptions,
+        contextOptions: selectedTestProject.contextOptions,
+      });
     } catch (e) {
       showExceptionAsUserError(this._vscode, model, e as Error);
       await this._reset(true);
@@ -504,7 +511,7 @@ export class Backend extends EventEmitter {
     await this._send('navigate', params);
   }
 
-  async setMode(params: { mode: 'none' | 'inspecting' | 'recording', testIdAttributeName?: string }) {
+  async setMode(params: { mode: 'none' | 'inspecting' | 'recording', testIdAttributeName?: string, browserName?: string, launchOptions?: Record<string, any>, contextOptions?: Record<string, any>  }) {
     await this._send('setRecorderMode', params);
   }
 

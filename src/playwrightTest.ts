@@ -30,7 +30,6 @@ export type TestConfig = {
   configFile: string;
   cli: string;
   version: number;
-  testIdAttributeName?: string;
 };
 
 export interface TestListener {

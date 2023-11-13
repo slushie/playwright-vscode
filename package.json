@@ -15,6 +15,7 @@
   "categories": [
     "Testing"
   ],
+  "enabledApiProposals": ["testingActiveProfile"],
   "activationEvents": [
     "workspaceContains:**/*playwright*.config.{ts,js,mjs}",
     "onCommand:pw.extension.install"

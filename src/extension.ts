@@ -88,6 +88,7 @@ export class Extension {
   } | undefined;
   private _diagnostics: vscodeTypes.DiagnosticCollection;
   private _treeItemObserver: TreeItemObserver;
+  private _testRunProfile2ProjectName: Map<vscodeTypes.TestRunProfile, TestProject> = new Map();
 
   constructor(vscode: vscodeTypes.VSCode) {
     this._vscode = vscode;
@@ -175,18 +176,20 @@ export class Extension {
         this._reusedBrowser.closeAllBrowsers();
       }),
       vscode.commands.registerCommand('pw.extension.command.recordNew', async () => {
-        if (!this._models.length) {
+        const selecetedTestProject = await this._getDefaultTestProject();
+        if (!selecetedTestProject) {
           vscode.window.showWarningMessage(messageNoPlaywrightTestsFound);
           return;
         }
-        await this._reusedBrowser.record(this._models, true);
+        await this._reusedBrowser.record(selecetedTestProject, true);
       }),
       vscode.commands.registerCommand('pw.extension.command.recordAtCursor', async () => {
-        if (!this._models.length) {
+        const selecetedTestProject = await this._getDefaultTestProject();
+        if (!selecetedTestProject) {
           vscode.window.showWarningMessage(messageNoPlaywrightTestsFound);
           return;
         }
-        await this._reusedBrowser.record(this._models, false);
+        await this._reusedBrowser.record(selecetedTestProject, false);
       }),
       vscode.workspace.onDidChangeTextDocument(() => {
         if (this._completedSteps.size) {
@@ -265,6 +268,8 @@ export class Extension {
       this._testTree.addModel(model);
       await model.listFiles();
 
+      this._testRunProfile2ProjectName.clear();
+
       for (const project of model.projects.values()) {
         await this._createRunProfile(project, usedProfiles);
         this._workspaceObserver.addWatchFolder(project.testDir);
@@ -303,8 +308,9 @@ export class Extension {
     let runProfile = this._runProfiles.get(keyPrefix + ':run');
     const projectTag = this._testTree.projectTag(project);
     if (!runProfile) {
-      runProfile = this._testController.createRunProfile(`${projectPrefix}${folderName}${path.sep}${configName}`, this._vscode.TestRunProfileKind.Run, this._scheduleTestRunRequest.bind(this, configFile, project.name, false), true, projectTag);
+      runProfile = this._testController.createRunProfile(`${projectPrefix}${folderName}${path.sep}${configName}`, this._vscode.TestRunProfileKind.Run, this._scheduleTestRunRequest.bind(this, configFile, project.name, false), false, projectTag);
       this._runProfiles.set(keyPrefix + ':run', runProfile);
+      this._testRunProfile2ProjectName.set(runProfile, project);
     }
     let debugProfile = this._runProfiles.get(keyPrefix + ':debug');
     if (!debugProfile) {
@@ -313,6 +319,21 @@ export class Extension {
     }
     usedProfiles.add(runProfile);
     usedProfiles.add(debugProfile);
+  }
+
+  private async _getDefaultTestProject() {
+    for (const [a, b] of this._testRunProfile2ProjectName)
+      console.log(a.label, b.name, a.isDefault)
+    const defaultProjects = [...this._testRunProfile2ProjectName.entries()].filter(([runProfile]) => runProfile.isSelected);
+    if (defaultProjects.length === 0)
+      return;
+    if (defaultProjects.length === 1)
+      return defaultProjects[0][1];
+    const selectedProject = await this._vscode.window.showQuickPick(defaultProjects.map(([_, project]) => project.name), {
+      placeHolder: this._vscode.l10n.t('Select a project to run'),
+      canPickMany: false,
+    });
+    return selectedProject ? defaultProjects.find(([_, project]) => project.name === selectedProject)![1] : undefined;
   }
 
   private _scheduleTestRunRequest(configFile: string, projectName: string, isDebug: boolean, request: vscodeTypes.TestRunRequest) {
